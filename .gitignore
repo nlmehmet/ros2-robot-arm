@@ -1,0 +1,11 @@
+# colcon outputs
+/build/
+/install/
+/log/
+# Python and editors
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.vscode/
+.idea/

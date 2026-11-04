@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>robot_arm_teleop</name>
+  <version>0.0.1</version>
+  <description>Future joystick input and command translation nodes.</description>
+  <maintainer email="maintainers@example.com">Robot Arm Maintainers</maintainer>
+  <!-- Maintainer contact is a placeholder; confirm before releasing. -->
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>python3-setuptools</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>trajectory_msgs</exec_depend>
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

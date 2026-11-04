@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>robot_arm_control</name>
+  <version>0.0.1</version>
+  <description>Controller configuration and future hardware integration.</description>
+  <maintainer email="maintainers@example.com">Robot Arm Maintainers</maintainer>
+  <!-- Maintainer contact is a placeholder; confirm before releasing. -->
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>joint_state_broadcaster</exec_depend>
+  <exec_depend>joint_trajectory_controller</exec_depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
