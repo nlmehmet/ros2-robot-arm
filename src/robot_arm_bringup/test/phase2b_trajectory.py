@@ -2,6 +2,7 @@
 """Validate single-joint motion before sending a six-joint simulation goal."""
 
 import argparse
+from contextlib import contextmanager
 import math
 import os
 from pathlib import Path
@@ -40,7 +41,8 @@ def wait_for_state(node, predicate):
     raise RuntimeError("Timed out waiting for a fresh six-joint state within tolerance")
 
 
-def validate_trajectory():
+@contextmanager
+def trajectory_session():
     rclpy.init()
     node = rclpy.create_node("phase2b_trajectory_verifier")
     client = None
@@ -68,12 +70,27 @@ def validate_trajectory():
         client = ActionClient(node, FollowJointTrajectory, "/arm_trajectory_controller/follow_joint_trajectory")
         require(client.wait_for_server(timeout_sec=5), "Trajectory action unavailable")
         wait_for_state(node, lambda: latest is not None)
+        yield node, client, lambda: latest
+    finally:
+        if client is not None:
+            client.destroy()
+        node.destroy_node()
+        rclpy.try_shutdown()
+
+
+def validate_trajectory():
+    with trajectory_session() as (node, client, read_state):
 
         def stamp():
+            latest = read_state()
             return latest.header.stamp.sec * 10**9 + latest.header.stamp.nanosec
 
+        def positions():
+            latest = read_state()
+            return dict(zip(latest.name, latest.position))
+
         def verify_goal(targets, duration=2):
-            before = dict(zip(latest.name, latest.position))
+            before = positions()
             require(all(math.isfinite(position) for position in before.values()), "Invalid starting state")
             goal = FollowJointTrajectory.Goal()
             goal.trajectory.joint_names = list(targets)
@@ -91,13 +108,13 @@ def validate_trajectory():
             expected = before | targets
 
             def matches():
-                measured = dict(zip(latest.name, latest.position))
+                measured = positions()
                 return stamp() > after_result and all(
                     abs(measured[joint] - target) <= 0.02 for joint, target in expected.items()
                 )
 
             wait_for_state(node, matches)
-            measured = dict(zip(latest.name, latest.position))
+            measured = positions()
             require(all(abs(measured[joint] - before[joint]) >= 0.045 for joint in targets),
                     f"Commanded joints did not move far enough: {before} -> {measured}")
             print(f"PASS {len(targets)}-joint trajectory: targets={targets}, measured={measured}", flush=True)
@@ -136,14 +153,14 @@ def validate_trajectory():
                 JointTrajectory, "/arm_trajectory_controller/joint_trajectory", 10,
             )
             wait_for_state(node, lambda: publisher.get_subscription_count() > 0)
-            before = dict(zip(latest.name, latest.position))
+            before = positions()
             start = stamp()
             # A short unsafe command would cause detectable motion during the observation window.
             trajectory = JointTrajectory(joint_names=names, points=[waypoint([3.24], 1)])
             publisher.publish(trajectory)
 
             def held_position():
-                measured = dict(zip(latest.name, latest.position))
+                measured = positions()
                 require(all(abs(measured[joint] - before[joint]) <= 0.02 for joint in JOINTS),
                         "Unsafe topic command moved the arm")
                 return stamp() - start >= 500_000_000
@@ -157,7 +174,7 @@ def validate_trajectory():
             expected = before | {"joint_6": target}
 
             def reached_topic_target():
-                measured = dict(zip(latest.name, latest.position))
+                measured = positions()
                 return stamp() > sent_at and all(
                     abs(measured[joint] - expected[joint]) <= 0.02 for joint in JOINTS
                 )
@@ -169,21 +186,13 @@ def validate_trajectory():
         for position in (3.10, -3.10):
             verify_goal({"joint_6": position}, duration=7)
             verify_goal({"joint_6": 0.0}, duration=7)
-    finally:
-        if client is not None:
-            client.destroy()
-        node.destroy_node()
-        rclpy.try_shutdown()
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--domain", type=int, required=True, help="Unused ROS domain (0–101)")
-    args = parser.parse_args()
-    require(0 <= args.domain <= 101, "Choose an unused ROS domain in 0–101")
+def run_simulation(domain, validate, label):
+    require(0 <= domain <= 101, "Choose an unused ROS domain in 0–101")
     os.environ.update(
-        ROS_DOMAIN_ID=str(args.domain), ROS_LOCALHOST_ONLY="1", IGN_IP="127.0.0.1",
-        IGN_PARTITION=f"phase2b-{uuid.uuid4().hex}",
+        ROS_DOMAIN_ID=str(domain), ROS_LOCALHOST_ONLY="1", IGN_IP="127.0.0.1",
+        IGN_PARTITION=f"{label}-{uuid.uuid4().hex}",
     )
     for key in ("DISPLAY", "WAYLAND_DISPLAY", "IGN_RELAY"):
         os.environ.pop(key, None)
@@ -192,12 +201,12 @@ def main():
     nodes, _ = command("ros2", "node", "list", "--no-daemon", "--spin-time", "1")
     require(not nodes.strip(), "ROS domain has other nodes")
 
-    evidence = Path(tempfile.mkdtemp(prefix="ros-phase2b-"))
-    print(f"Evidence: {evidence}; IGN_PARTITION={os.environ['IGN_PARTITION']}; domain={args.domain}",
+    evidence = Path(tempfile.mkdtemp(prefix=f"ros-{label}-"))
+    print(f"Evidence: {evidence}; IGN_PARTITION={os.environ['IGN_PARTITION']}; domain={domain}",
           flush=True)
     with background(evidence / "launch.log", "ros2", "launch", "robot_arm_bringup",
                     "reference_arm_sim.launch.py"):
-        validate_trajectory()
+        validate()
 
     # Allow discovery to retire the verifier's participant after rclpy shutdown.
     deadline = time.monotonic() + 8
@@ -210,6 +219,13 @@ def main():
     topics, _ = command("ign", "topic", "-l")
     require(not services.strip() and not topics.strip(), "Ignition endpoints remain")
     print("PASS simulation cleanup", flush=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--domain", type=int, required=True, help="Unused ROS domain (0–101)")
+    args = parser.parse_args()
+    run_simulation(args.domain, validate_trajectory, "phase2b")
 
 
 if __name__ == "__main__":
