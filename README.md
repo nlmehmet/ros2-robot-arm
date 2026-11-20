@@ -2,14 +2,14 @@
 
 A modular starting point for a six-DOF robotic arm. Target: **Ubuntu 22.04 LTS, ROS 2 Humble, Gazebo Fortress (Gazebo Sim 6), Python 3.10, C++17, colcon, and ament**.
 
-The workspace now includes an **illustrative six-joint Xacro reference model** (Phase 1A). Gazebo simulation, controllers, joystick nodes, and STM32 communication remain future work.
+The workspace now includes an **illustrative six-joint Xacro reference model and headless bringup** (Phase 1B). Gazebo simulation, controllers, joystick nodes, and STM32 communication remain future work.
 
 ## Workspace
 
 The repository root is the colcon workspace. `src/` contains:
 
-- `robot_arm_description` — ament_cmake; illustrative six-joint Xacro model; future measured robot geometry, meshes, and RViz assets.
-- `robot_arm_bringup` — ament_cmake; future launch composition and environment configuration.
+- `robot_arm_description` — ament_cmake package with the illustrative six-joint Xacro model and its RViz configuration. Measured geometry and meshes are planned.
+- `robot_arm_bringup` — ament_cmake; reference arm launch composition and environment configuration.
 - `robot_arm_control` — ament_cmake; future controller configuration and C++ hardware plugin.
 - `robot_arm_teleop` — ament_python; future joystick command translation.
 - `robot_arm_interfaces` — ament_cmake; reserved message/service/action contracts, with no generated interfaces yet.
@@ -56,7 +56,7 @@ colcon test --event-handlers console_direct+
 colcon test-result --verbose
 ```
 
-All five packages must build and resolve from this workspace's install directory. The scaffold has no ROS runtime tests yet; `colcon test` may report zero tests. The root structural suite is run separately and must execute nonzero tests.
+All five packages must build and resolve from this workspace's install directory. The colcon test exercises the installed headless launch and verifies TF. The root structural suite is run separately and must execute nonzero tests.
 
 For phase 2, install the simulator integration separately:
 
@@ -64,10 +64,10 @@ For phase 2, install the simulator integration separately:
 sudo apt install ros-humble-ros-gz ros-humble-ign-ros2-control
 ```
 
-There is no robot bringup or Gazebo launch command at this stage. Fortress is the Gazebo Sim generation paired with ROS 2 Humble; Humble-era integration packages and APIs may retain Ignition/`ign` names. See the Ubuntu guide for package availability checks before installing. Joystick drivers, STM32 toolchains, physical devices, and GUI tools are not required for phase 0.
+See the [reference arm launch guide](src/robot_arm_bringup/launch/README.md) for Phase 1B bringup. Fortress is the Gazebo Sim generation paired with ROS 2 Humble; Humble-era integration packages and APIs may retain Ignition/`ign` names. See the Ubuntu guide for package availability checks before installing. Joystick drivers, STM32 toolchains, physical devices, and GUI tools are not required for phase 0.
 
 ## Validation limitations
 
-The initial scaffold was checked offline in a Debian environment without ROS 2 or colcon. A Humble build, Gazebo startup, and controller behavior have not been validated there. Run the target-machine checks above before treating the ROS workspace as build-verified.
+Phase 1B was built and tested on Ubuntu 22.04 with ROS 2 Humble. Both headless launch modes passed TF and launch shutdown checks. Interactive RViz rendering remains to be verified for the full Phase 1 gate.
 
 Package maintainer contact is provisional. Confirm contact details and the proposed Apache-2.0 license metadata before distribution.

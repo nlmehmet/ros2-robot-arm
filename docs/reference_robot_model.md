@@ -1,4 +1,4 @@
-# Reference six-joint model — Phase 1A
+# Reference six-joint model
 
 This is a **teaching reference**, not a measured robot or a safe hardware design.
 The Xacro model in `src/robot_arm_description/urdf/reference_arm.urdf.xacro`
@@ -21,8 +21,7 @@ contains seven cylindrical rigid links and six revolute joints.
   `Ixx=Iyy=m(3r²+L²)/12`, `Izz=mr²/2`.
 - Angles are radians; dimensions metres; masses kilograms. The example limits,
   masses, dimensions, and effort values have **not** been verified for any motors.
-- No ROS controller, Gazebo plugin, launch file, STM32 interface, or motor driver
-  is included. No physical actuator may be enabled from this model.
+- Phase 1B runs kinematic inspection only. No physical actuator may be enabled from this model.
 
 ## Verify on Ubuntu 22.04 with ROS 2 Humble
 
@@ -32,15 +31,31 @@ From the repository root:
 source /opt/ros/humble/setup.bash
 python3 -m unittest discover -s tests -v
 ros2 run xacro xacro src/robot_arm_description/urdf/reference_arm.urdf.xacro > /tmp/reference_arm.urdf
-# Optional if installed: check_urdf /tmp/reference_arm.urdf
+check_urdf /tmp/reference_arm.urdf  # if installed
 colcon build --symlink-install --event-handlers console_direct+
 source install/setup.bash
-ros2 pkg prefix robot_arm_description
+colcon test --packages-select robot_arm_bringup --event-handlers console_direct+
+colcon test-result --verbose
 ```
 
-The pure-Python structural test can run anywhere. The expanded-URDF test is
-skipped when `xacro` is unavailable. Neither a static test nor colcon build
-validates RViz visualization, moving TF frames, Gazebo physics, or hardware.
+With `joint_state_publisher` installed, launch the default reference pose with:
+
+```bash
+ros2 launch robot_arm_bringup reference_arm.launch.py
+```
+
+For external joint input, pass `publish_joint_states:=false`. This mode can run
+without `joint_state_publisher`; publish all six positions on `/joint_states` to
+populate the moving transforms. Add `rviz:=true` on a graphical desktop with
+`rviz2` installed. See the [launch guide](../src/robot_arm_bringup/launch/README.md).
+
+The root structural suite checks Xacro expansion when Xacro is installed. The
+colcon test starts the installed headless launch on a localhost-only ROS domain
+and checks all six parent-child transforms and the base-to-tip chain. It exercises
+zero and signed nonzero angles with external input. Both that case and the
+default zero-pose case passed on Ubuntu 22.04 with Humble, including a clean
+launch exit after SIGINT. Interactive RViz rendering remains a manual check
+for the full Phase 1 gate.
 
 ## Before continuing to motion
 

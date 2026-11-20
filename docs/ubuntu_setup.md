@@ -1,6 +1,6 @@
 # Ubuntu 22.04 / ROS 2 Humble setup and validation
 
-This guide targets a native Ubuntu 22.04 LTS (Jammy) machine with system Python 3.10. It prepares the five packages and an illustrative Phase 1A six-joint reference model. No robot movement, Gazebo launch, or hardware integration exists yet. Commands below are target-machine instructions, not results from the current Debian review environment.
+This guide targets a native Ubuntu 22.04 LTS (Jammy) machine with system Python 3.10. It prepares the five packages and an illustrative Phase 1B six-joint reference model with headless bringup for kinematic inspection.
 
 ## 1. Install the supported toolchain
 
@@ -55,7 +55,7 @@ rosdep install --from-paths src --ignore-src --rosdistro humble -r -y
 rosdep check --from-paths src --ignore-src --rosdistro humble
 ```
 
-Both rosdep commands must succeed. Internal `robot_arm_*` dependencies are provided by this checkout; `--ignore-src` prevents installing them from apt. External runtime dependencies include xacro, robot_state_publisher, launch/launch_ros, ros2_control controller packages, rclpy, sensor_msgs, trajectory_msgs, and setuptools. The interfaces scaffold reserves rosidl generator/runtime dependencies but does not yet generate interfaces. C++ library and export dependencies must be added when a library is introduced.
+Both rosdep commands must succeed. Internal `robot_arm_*` dependencies are provided by this checkout; `--ignore-src` prevents installing them from apt. External runtime dependencies include xacro, robot_state_publisher, joint_state_publisher, ros2launch, launch/launch_ros, ros2_control controller packages, rclpy, sensor_msgs, trajectory_msgs, and setuptools. The interfaces scaffold reserves rosidl generator/runtime dependencies but does not yet generate interfaces. C++ library and export dependencies must be added when a library is introduced.
 
 ## 3. Validate manifests and build
 
@@ -131,7 +131,7 @@ colcon test --event-handlers console_direct+
 colcon test-result --verbose
 ```
 
-Run the root Python suite explicitly: it is not registered as a per-package colcon test. The optional manifest-parser test skips when catkin_pkg is absent; on this target machine it must execute after installing the tool above. Inspect test counts and failures. An empty colcon test run is expected for this scaffold and provides no runtime coverage. There are no generated custom interfaces to inspect and no node or launch command to run yet.
+Run the root Python suite explicitly: it is not registered as a per-package colcon test. The optional manifest-parser test skips when catkin_pkg is absent; on this target machine it must execute after installing the tool above. Inspect test counts and failures. The bringup package registers a bounded launch and TF test. See the [reference model guide](reference_robot_model.md) for launch commands and validation details.
 
 ## Later simulation prerequisites
 
@@ -145,19 +145,21 @@ ign gazebo --versions
 
 Target **Gazebo Fortress (Gazebo Sim 6)** with **ROS 2 Humble**. Check that apt reports an installable Candidate for both packages before installation. The Humble/Fortress ros2_control integration uses the historical `ign_ros2_control` name; Fortress also uses the `ign gazebo` CLI. Do not replace these with packages for a newer ROS distribution or an incompatible Gazebo release. The plugin creates the simulation controller manager inside Gazebo; do not additionally launch ros2_control_node for the same simulated robot. Joystick drivers, device access, STM32 tooling, and physical hardware validation belong to later phases.
 
-Require a reported Gazebo Sim major version of 6. Package candidates and these simulator commands have not been verified in this Debian environment. If a package has no Candidate, stop and diagnose the configured Humble apt repository and architecture rather than switching ROS distributions. Consult the official [Humble/Gazebo pairing guide](https://gazebosim.org/docs/fortress/ros_installation/) and the [Humble control integration source](https://github.com/ros-controls/gz_ros2_control/tree/humble) when resolving version-specific names. External references could not be fetched during this review because the configured network proxy was unreachable.
+Require a reported Gazebo Sim major version of 6. If a package has no Candidate, check the configured Humble apt repository and architecture. Verify package candidates and simulator commands on the target Ubuntu host when starting Phase 2. [Humble/Gazebo pairing guide](https://gazebosim.org/docs/fortress/ros_installation/) · [Humble control integration source](https://github.com/ros-controls/gz_ros2_control/tree/humble)
 
 Future bringup must bridge the simulation clock through ros_gz_bridge, set `use_sim_time` on simulation consumers, spawn the robot through ros_gz_sim, and load controllers through the plugin-owned manager. Installing dependencies or querying a simulator version does not validate these runtime behaviors.
 
 ## Evidence and remaining checks
 
-| Check | Current review environment | Required Ubuntu result |
-| --- | --- | --- |
-| Five manifests: XML, metadata, dependency structure | Covered by offline tests | catkin_pkg parser/validation also passes |
-| CMake/ament and Python install declarations | Static checks; setuptools metadata inspected | Real colcon configure/build/install passes |
-| Python syntax | Parsed offline on Python 3.12 | Re-run suite using system Python 3.10 |
-| ROS package discovery, installed assets, teleop import | Not run; ROS unavailable | All five resolve from this overlay; asset/import assertions pass |
-| ROS dependency resolution | Not run | rosdep install/check succeeds |
-| Gazebo, trajectories, joystick, STM32 | Not implemented or tested | Validate in their respective future phases |
+| Check | Required Ubuntu result |
+| --- | --- |
+| Five manifests and Python syntax | Structural suite passes with system Python 3.10 and catkin_pkg |
+| CMake/ament and Python install declarations | Colcon configure/build/install succeeds for all five packages |
+| ROS package discovery, installed assets, teleop import | All five resolve from this overlay and asset/import assertions pass |
+| ROS dependency resolution | rosdep install/check succeeds |
+| Phase 1B headless launch | Colcon tests verify external joint input and the default pose |
+| Gazebo, trajectories, joystick, STM32 | Validate in their respective future phases |
+
+Both Phase 1B headless launch cases passed on Ubuntu 22.04 with Humble with zero skips, failures, or errors. The pytest xUnit report lists two cases, external input and the default pose. The aggregate `colcon test-result` count includes the enclosing CTest entry, for a total of three records. Interactive RViz rendering remains a manual check for the full Phase 1 gate.
 
 Offline tests cannot establish ament configuration, ROS dependency availability, ABI compatibility, physics, or hardware safety. Maintainer email and proposed Apache-2.0 license metadata remain provisional pending release review.
