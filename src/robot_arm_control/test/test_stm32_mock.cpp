@@ -187,6 +187,98 @@ void check_heartbeat_fault_causes()
     heartbeat.fault() == mock::Status::send_error, "Failed send did not latch");
   std::cout << "PASS heartbeat disconnect, invalid reply, send fault, and cause retention\n";
 }
+void transfer(mock::BufferedTransport & from, mock::BufferedTransport & to, std::size_t count)
+{
+  for (std::size_t index = 0; index < count; ++index) {
+    const auto byte = from.take_byte();
+    check(byte && to.accept_byte(*byte), "Byte transfer did not complete");
+  }
+}
+
+void check_buffered_transport()
+{
+  mock::BufferedTransport endpoint;
+  check(!endpoint.send(request_one) && !endpoint.accept_byte(0) && !endpoint.take_byte() &&
+    !endpoint.receive(), "Disconnected transport accepted bytes");
+  endpoint.set_connected(true);
+  check(endpoint.send(request_one), "Transport failed to queue a frame");
+  check(endpoint.take_byte() == request_one.front(), "Wrong first outgoing byte");
+  check(!endpoint.send(reply_one), "Send overwrote a partially drained frame");
+  for (std::size_t index = 1; index < request_one.size(); ++index) {
+    check(endpoint.take_byte() == request_one[index], "Transmit bytes lost ordering");
+  }
+  check(!endpoint.take_byte() && endpoint.send(reply_one), "Transmit slot was not reusable");
+  for (auto byte : reply_two) {
+    check(endpoint.accept_byte(byte), "Receive slot rejected a byte within capacity");
+  }
+  check(!endpoint.accept_byte(0), "Full receive slot accepted another byte");
+  check(endpoint.receive() == reply_two && !endpoint.receive(), "Full frame was lost or duplicated");
+  check(endpoint.accept_byte(0xff), "Receive slot was not reused");
+  endpoint.set_connected(false);
+  endpoint.set_connected(true);
+  check(!endpoint.take_byte() && !endpoint.receive(), "Reconnect retained queued data");
+  for (auto byte : reply_one) {
+    check(endpoint.accept_byte(byte), "Reconnect retained partial receive occupancy");
+  }
+  check(endpoint.receive() == reply_one, "Reconnect retained a partial frame prefix");
+  std::cout << "PASS byte transport ordering, backpressure, and disconnect flush\n";
+}
+
+void check_fragmented_heartbeat()
+{
+  using State = mock::LinkState;
+  mock::BufferedTransport host;
+  mock::BufferedTransport peer;
+  mock::Loopback responder;
+  host.set_connected(true);
+  peer.set_connected(true);
+  responder.set_connected(true);
+  mock::Heartbeat heartbeat(host, 20ms, 10ms);
+  check(heartbeat.update(start) == State::awaiting_heartbeat, "Heartbeat failed to enqueue");
+  transfer(host, peer, 3);
+  check(!peer.receive(), "Fragment was delivered as a complete request");
+  transfer(host, peer, 7);
+  const auto request = peer.receive();
+  check(request == request_one && responder.send(*request), "Peer rejected reconstructed request");
+  const auto reply = responder.receive();
+  check(reply && peer.send(*reply), "Peer failed to queue acknowledgement");
+  transfer(peer, host, 9);
+  check(heartbeat.update(start + 8ms) == State::awaiting_heartbeat,
+    "Incomplete acknowledgement established health");
+  transfer(peer, host, 1);
+  check(heartbeat.update(start + 9ms) == State::healthy, "Fragmented reply was not acknowledged");
+
+  heartbeat.update(start + 20ms);
+  transfer(host, peer, request_one.size());
+  check(peer.receive().has_value(), "Periodic request did not arrive");
+  auto corrupt = reply_two;
+  corrupt.back() ^= 1;
+  check(peer.send(corrupt), "Failed to enqueue corrupt reply fixture");
+  transfer(peer, host, corrupt.size());
+  check(heartbeat.update(start + 21ms) == State::faulted &&
+    heartbeat.fault() == mock::Status::invalid_reply, "Corruption did not reach heartbeat validation");
+  check(heartbeat.reset_fault(), "Transport fault did not reset");
+  heartbeat.update(start + 22ms);
+  check(peer.send(reply_three), "Could not queue third reply fixture");
+  transfer(peer, host, reply_three.size() - 1);
+  check(heartbeat.update(start + 32ms) == State::faulted &&
+    heartbeat.fault() == mock::Status::timed_out, "Truncated reply did not time out");
+  host.set_connected(false);
+  peer.set_connected(false);
+  host.set_connected(true);
+  peer.set_connected(true);
+  check(heartbeat.update(start + 33ms) == State::faulted, "Reconnect cleared the timeout");
+  check(heartbeat.reset_fault(), "Reconnect reset failed");
+  heartbeat.update(start + 34ms);
+  transfer(host, peer, request_one.size());
+  const auto recovered_request = peer.receive();
+  check(recovered_request && responder.send(*recovered_request), "Recovered request was invalid");
+  const auto recovered_reply = responder.receive();
+  check(recovered_reply && peer.send(*recovered_reply), "Recovered reply could not be queued");
+  transfer(peer, host, reply_one.size());
+  check(heartbeat.update(start + 35ms) == State::healthy, "Fresh transport exchange failed");
+  std::cout << "PASS fragmented heartbeat, corruption, truncation timeout, and reconnect\n";
+}
 }  // namespace
 
 int main()
@@ -197,6 +289,8 @@ int main()
     check_faults();
     check_heartbeat();
     check_heartbeat_fault_causes();
+    check_buffered_transport();
+    check_fragmented_heartbeat();
   } catch (const std::exception & error) {
     std::cerr << error.what() << '\n';
     return 1;

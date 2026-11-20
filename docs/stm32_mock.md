@@ -36,6 +36,20 @@ acknowledgement is required to restore health. The probe sequence persists
 across resets so a stale reply cannot restore health. All supervision runs in
 the caller's update loop.
 
+## Buffered byte transport
+
+`BufferedTransport` implements the same packet interface with one fixed-size
+buffer per direction. `send()` queues a whole frame and `take_byte()` drains
+it in order. `accept_byte()` accumulates incoming bytes until `receive()` can
+return a complete frame. A full buffer refuses input without overwriting it.
+Callers retain any byte refused by the receiver until space is available.
+Disconnect flushes both directions, including partially transferred frames.
+
+The host harness starts each connection at a frame boundary. CRC and sequence
+validation remain in the probe. Byte insertion or loss can invalidate alignment,
+so the harness reconnects both endpoints to clear buffers before recovery.
+The adapter uses fixed memory and has no serial port, CAN, or device access.
+
 ```bash
 source /opt/ros/humble/setup.bash
 colcon build --base-paths src --symlink-install
