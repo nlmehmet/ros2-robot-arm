@@ -12,6 +12,7 @@
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>robot_arm_description</exec_depend>
   <exec_depend>robot_arm_control</exec_depend>
+  <exec_depend>robot_arm_teleop</exec_depend>
   <exec_depend>xacro</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>joint_state_publisher</exec_depend>

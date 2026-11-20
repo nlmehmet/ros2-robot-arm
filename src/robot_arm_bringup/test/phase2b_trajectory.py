@@ -188,7 +188,7 @@ def validate_trajectory():
             verify_goal({"joint_6": 0.0}, duration=7)
 
 
-def run_simulation(domain, validate, label):
+def run_simulation(domain, validate, label, launch_arguments=()):
     require(0 <= domain <= 101, "Choose an unused ROS domain in 0–101")
     os.environ.update(
         ROS_DOMAIN_ID=str(domain), ROS_LOCALHOST_ONLY="1", IGN_IP="127.0.0.1",
@@ -205,7 +205,7 @@ def run_simulation(domain, validate, label):
     print(f"Evidence: {evidence}; IGN_PARTITION={os.environ['IGN_PARTITION']}; domain={domain}",
           flush=True)
     with background(evidence / "launch.log", "ros2", "launch", "robot_arm_bringup",
-                    "reference_arm_sim.launch.py"):
+                    "reference_arm_sim.launch.py", *launch_arguments):
         validate()
 
     # Allow discovery to retire the verifier's participant after rclpy shutdown.

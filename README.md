@@ -2,7 +2,7 @@
 
 A modular starting point for a six-DOF robotic arm. Target: **Ubuntu 22.04 LTS, ROS 2 Humble, Gazebo Fortress (Gazebo Sim 6), Python 3.10, C++17, colcon, and ament**.
 
-The workspace now includes an **illustrative six-joint Xacro reference model and headless bringup** (Phase 1B). Gazebo simulation, controllers, joystick nodes, and STM32 communication remain future work.
+The workspace includes an illustrative six-joint Xacro reference arm, headless Fortress simulation, and automated motion and fault tests. Phase 4 adds opt-in [simulation joystick control](docs/phase4_sim_joystick.md).
 
 ## Workspace
 
@@ -11,7 +11,7 @@ The repository root is the colcon workspace. `src/` contains:
 - `robot_arm_description` — ament_cmake package with the illustrative six-joint Xacro model and its RViz configuration. Measured geometry and meshes are planned.
 - `robot_arm_bringup` — ament_cmake; reference arm launch composition and environment configuration.
 - `robot_arm_control` — ament_cmake; future controller configuration and C++ hardware plugin.
-- `robot_arm_teleop` — ament_python; future joystick command translation.
+- `robot_arm_teleop` — ament_python; joystick command translation for the reference arm simulation.
 - `robot_arm_interfaces` — ament_cmake; reserved message/service/action contracts, with no generated interfaces yet.
 
 See [architecture](docs/architecture.md), [development phases](docs/development_plan.md), [reference model](docs/reference_robot_model.md), [Ubuntu installation and validation](docs/ubuntu_setup.md), and [engineering rules](AGENTS.md).
@@ -56,7 +56,7 @@ colcon test --event-handlers console_direct+
 colcon test-result --verbose
 ```
 
-All five packages must build and resolve from this workspace's install directory. The colcon test exercises the installed headless launch and verifies TF. The root structural suite is run separately and must execute nonzero tests.
+All five packages must build and resolve from this workspace's install directory. Colcon exercises the installed headless TF and Fortress launches, including trajectory faults and synthetic joystick input. Run the root structural suite separately.
 
 For phase 2, install the simulator integration separately:
 

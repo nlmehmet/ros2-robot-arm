@@ -89,7 +89,7 @@ class WorkspaceContracts(unittest.TestCase):
                 visit(dependency, path + [name])
         for name in graph:
             visit(name, [])
-        self.assertEqual(graph['robot_arm_bringup'], {'robot_arm_description', 'robot_arm_control'})
+        self.assertEqual(graph['robot_arm_bringup'], {'robot_arm_description', 'robot_arm_control', 'robot_arm_teleop'})
         self.assertFalse(graph['robot_arm_description'])
 
     def test_cmake_packages_register_and_install_existing_asset_directories(self):
@@ -133,7 +133,8 @@ class WorkspaceContracts(unittest.TestCase):
         self.assertEqual(captured['license'], self.manifests[name].findtext('license'))
         self.assertEqual(captured['maintainer_email'], self.manifests[name].find('maintainer').attrib['email'])
         self.assertIn('setuptools', captured['install_requires'])
-        self.assertEqual(captured['entry_points']['console_scripts'], [])
+        self.assertEqual(captured['entry_points']['console_scripts'],
+                         ['sim_joystick = robot_arm_teleop.sim_joystick:main'])
         installed = dict(captured['data_files'])
         self.assertEqual(installed['share/ament_index/resource_index/packages'], ['resource/' + name])
         self.assertIn('package.xml', installed['share/' + name])
