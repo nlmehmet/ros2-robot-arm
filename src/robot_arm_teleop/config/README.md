@@ -1,3 +1,4 @@
 # robot_arm_teleop: config
 
-Reserved for a later development phase. No runtime implementation is provided yet.
+Set the joint, axis, deadman button, scale, and input timeout through the
+Fortress launch arguments. The launch supplies limits from the simulation model.

@@ -6,9 +6,11 @@ import xml.etree.ElementTree as ET
 
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import EmitEvent, ExecuteProcess, RegisterEventHandler
+from launch.actions import DeclareLaunchArgument, EmitEvent, ExecuteProcess, OpaqueFunction, RegisterEventHandler
+from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit, OnShutdown
 from launch.events import Shutdown
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 import xacro
@@ -31,6 +33,7 @@ def write_controller_config(urdf, template, destination):
         for name in trajectory["joints"]
     }
     destination.write_text(yaml.safe_dump(config))
+    return trajectory['position_bounds'], limits
 
 
 def generate_launch_description():
@@ -47,7 +50,26 @@ def generate_launch_description():
             "control_plugin": str(plugin),
         },
     ).toxml()
-    write_controller_config(urdf, control / "config/reference_arm_sim.yaml", controller_config)
+    bounds, limits = write_controller_config(urdf, control / "config/reference_arm_sim.yaml", controller_config)
+
+    def start_teleop(context):
+        joint = LaunchConfiguration('joy_joint').perform(context)
+        if joint not in bounds:
+            raise ValueError(f'Unknown joystick joint {joint!r}. Choose from {", ".join(bounds)}')
+        lower, upper = bounds[joint]
+        return [Node(
+            package='robot_arm_teleop', executable='sim_joystick',
+            parameters=[{
+                'joint': joint, 'lower_rad': lower, 'upper_rad': upper,
+                'max_rate_rad_s': float(limits[joint].attrib['velocity']),
+                'axis': ParameterValue(LaunchConfiguration('joy_axis'), value_type=int),
+                'deadman_button': ParameterValue(LaunchConfiguration('joy_deadman_button'), value_type=int),
+                'scale_rad_s': ParameterValue(LaunchConfiguration('joy_scale'), value_type=float),
+                'input_timeout_s': ParameterValue(LaunchConfiguration('joy_timeout'), value_type=float),
+            }],
+            remappings=[('~/joint_trajectory', '/arm_trajectory_controller/joint_trajectory')],
+            output='screen',
+        )]
 
     server = ExecuteProcess(
         cmd=["ign", "gazebo", "-s", "-r", str(bringup / "worlds/phase2a.sdf")],
@@ -94,6 +116,12 @@ def generate_launch_description():
         return []
 
     return LaunchDescription([
+        DeclareLaunchArgument('teleop', default_value='false', description='Enable Fortress joystick input'),
+        DeclareLaunchArgument('joy_joint', default_value='joint_1', description='Joint controlled by the axis'),
+        DeclareLaunchArgument('joy_axis', default_value='0', description='Zero-based axis index'),
+        DeclareLaunchArgument('joy_deadman_button', default_value='0', description='Zero-based button index'),
+        DeclareLaunchArgument('joy_scale', default_value='0.4', description='Full-stick command rate in rad/s'),
+        DeclareLaunchArgument('joy_timeout', default_value='0.25', description='Joy receipt timeout in seconds'),
         RegisterEventHandler(OnShutdown(on_shutdown=clean_controller_config)),
         RegisterEventHandler(OnProcessExit(
             target_action=server,
@@ -108,4 +136,5 @@ def generate_launch_description():
             on_exit=lambda event, context: continue_or_shutdown(event, context, "Controller spawner"),
         )),
         publisher, clock, server, spawn,
+        OpaqueFunction(function=start_teleop, condition=IfCondition(LaunchConfiguration('teleop'))),
     ])

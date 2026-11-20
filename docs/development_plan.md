@@ -9,18 +9,20 @@ Each phase depends on completion of the previous phase unless noted. Run structu
 | 2A — Headless smoke test | Phase 1B; Gazebo Fortress, ros_gz_sim, ros_gz_bridge | Server-only world starts; measured cube poses show descent and ground contact; exactly one reference arm spawns with six named joints; two ROS clock timestamps increase; scoped transport and clean shutdown are checked on two runs. |
 | 2B — Simulation and control | Phase 2A; Gazebo Fortress (Gazebo Sim 6), ros_gz_sim, ros_gz_bridge, ign_ros2_control, controller_manager, joint_state_broadcaster, joint_trajectory_controller | Headless world starts; robot spawns once; controllers activate; six joint states publish; a single-joint FollowJointTrajectory goal succeeds before a six-joint goal, and both meet measured tolerances; invalid action goals are rejected; an out-of-range topic command leaves the arm in place and a valid topic command moves it; valid commands near either stop of joint_6 can return it to zero. |
 | 3 — Repeatable motion tests | Phase 2B; existing Fortress launch, `control_msgs` action client, and `ament_cmake_pytest` | Automated startup, six-joint motion, out-of-range rejection, controller goal timeout, and client deadline and cancellation pass. Motion recovers after faults, and a fresh simulation can move after clean shutdown. Results include joint errors and controller state. |
-| 4 — Joystick control | Phase 3; joy, sensor_msgs, teleop adapter; choose mapping and command mode | Configurable deadman and scaling; bounded commands; disconnect and stale input stop commands safely; tests use synthetic Joy messages without a device. |
+| 4 — Joystick control | Phase 3; Fortress launch, standard Joy and JointTrajectory messages, optional joy driver | Opt-in, configurable joint, axis, deadman, scaling, and timeout. Synthetic Joy tests verify bounded simulated motion, release, disconnect, and rearming. |
 | 5 — STM32 integration | Reviewed electrical/safety design and protocol; C++17 ros2_control hardware plugin; selected serial or CAN transport | Mock transport passes framing, checksum, timeout, reconnect, and error tests; simulation still passes; supervised bench test verifies limits, watchdog, stop path, and feedback before powered motion. |
 
 See the [reference model guide](reference_robot_model.md) for Phase 1B launch and validation commands. The full Phase 1 gate also requires hardware-reviewed specifications and visual inspection.
 
 See the [Phase 3 motion and fault checks](phase3_motion_tests.md) for test commands and expected results.
 
+See the [Phase 4 joystick guide](phase4_sim_joystick.md) for the mapping and validation commands.
+
 ## Decisions before implementation
 
 - Confirm robot geometry, actuator limits, payload, and joint naming before phase 1.
 - Pin compatible Humble package versions in deployment/CI once a target machine is available. Use Fortress-compatible Humble binaries and Ignition-era plugin APIs; do not substitute packages for another ROS distribution or Gazebo generation.
-- Choose joystick mapping during phase 4 and STM32 transport/protocol during phase 5; neither blocks the scaffold.
+- Choose STM32 transport and protocol during phase 5.
 - Use standard trajectory actions first. Add custom interfaces only with documented consumers and compatibility requirements.
 - Confirm maintainer contact and licensing before release.
 

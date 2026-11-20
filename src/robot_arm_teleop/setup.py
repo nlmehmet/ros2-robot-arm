@@ -17,7 +17,7 @@ setup(
     zip_safe=True,
     maintainer='Robot Arm Maintainers',
     maintainer_email='maintainers@example.com',
-    description='Future joystick input and command translation nodes.',
+    description='Joystick command translation for the reference arm simulation.',
     license='Apache-2.0',
-    entry_points={'console_scripts': []},
+    entry_points={'console_scripts': ['sim_joystick = robot_arm_teleop.sim_joystick:main']},
 )
