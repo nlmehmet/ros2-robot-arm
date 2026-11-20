@@ -105,7 +105,13 @@ def test_reference_arm_tf(use_default_input, monkeypatch, tmp_path):
                     expected_nodes = {node.get_name(), "robot_state_publisher"}
                     if use_default_input:
                         expected_nodes.add("joint_state_publisher")
-                    assert set(node.get_node_names()) == expected_nodes
+                    # TF data can arrive before discovery of its upstream node.
+                    deadline = time.monotonic() + 5
+                    discovered = set(node.get_node_names())
+                    while discovered < expected_nodes and time.monotonic() < deadline:
+                        rclpy.spin_once(node, timeout_sec=0.1)
+                        discovered = set(node.get_node_names())
+                    assert discovered == expected_nodes
                     listener.unregister()
                 finally:
                     node.destroy_node()

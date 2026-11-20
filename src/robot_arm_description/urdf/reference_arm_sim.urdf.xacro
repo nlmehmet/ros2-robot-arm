@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<robot name="reference_arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="reference_arm.urdf.xacro"/>
+  <xacro:arg name="controller_config" default=""/>
+  <xacro:arg name="control_plugin" default="libign_ros2_control-system.so"/>
+
+  <link name="world"/>
+  <joint name="world_to_base" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+  </joint>
+
+  <xacro:macro name="sim_joint" params="name">
+    <joint name="${name}">
+      <command_interface name="position"/>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+  </xacro:macro>
+
+  <ros2_control name="ReferenceArmSimulation" type="system">
+    <hardware>
+      <plugin>ign_ros2_control/IgnitionSystem</plugin>
+    </hardware>
+    <xacro:sim_joint name="joint_1"/>
+    <xacro:sim_joint name="joint_2"/>
+    <xacro:sim_joint name="joint_3"/>
+    <xacro:sim_joint name="joint_4"/>
+    <xacro:sim_joint name="joint_5"/>
+    <xacro:sim_joint name="joint_6"/>
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="$(arg control_plugin)" name="ign_ros2_control::IgnitionROS2ControlPlugin">
+      <parameters>$(arg controller_config)</parameters>
+      <robot_param_node>robot_state_publisher</robot_param_node>
+    </plugin>
+  </gazebo>
+</robot>

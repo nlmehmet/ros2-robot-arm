@@ -47,13 +47,13 @@ Simulation and physical hardware are mutually exclusive backends for the same si
 
 In Gazebo Fortress mode, the `ign_ros2_control` plugin creates the controller manager inside Gazebo. Bringup starts Gazebo, spawns the robot, then loads controllers through that manager's services; it must not start a second `ros2_control_node`. In physical hardware mode, bringup instead starts `ros2_control_node` with the future hardware plugin. The shared manager node in the diagram represents these mutually exclusive alternatives.
 
-Fortress is Gazebo Sim major version 6. Use `ros_gz_sim` for spawning and simulator launch integration, and `ros_gz_bridge` for selected Gazebo Transport topics such as the simulation clock. Joint states and trajectory commands use the ros2_control ROS interfaces directly. In simulation, enable `use_sim_time` consistently for ROS nodes and bridge `/clock`; the diagram shows robot_state_publisher as one consumer. The Humble/Fortress control integration retains the historical `ign_ros2_control` package name. Plugin class and library identifiers must be checked against the installed Humble/Fortress version when the model is implemented; no plugin declarations are present in this scaffold.
+Fortress is Gazebo Sim major version 6. Use `ros_gz_sim` for spawning and simulator launch integration, and `ros_gz_bridge` for selected Gazebo Transport topics such as the simulation clock. Joint states and trajectory commands use the ros2_control ROS interfaces directly. In simulation, enable `use_sim_time` consistently for ROS nodes and bridge `/clock`; the diagram shows robot_state_publisher as one consumer. The Humble/Fortress control integration retains the historical `ign_ros2_control` package name. Plugin class and library identifiers must be checked against the installed Humble/Fortress version when the model is implemented; the Phase 2B simulation Xacro records the identifiers validated on Humble and Fortress.
 
-Current package dependencies cover the scaffold's intended description, launch, controller, and Python roles. Controller integration, `control_msgs`, and `joy` are planned dependencies, not claims of installed or implemented features. Declare them in the consuming package when that feature is introduced. The reserved C++ include/source directories contain no library and are deliberately not installed. Asset directories are installed under `share/<package>`; teleop also registers its ament resource marker and Python module.
+Current package dependencies cover the scaffold's intended description, launch, controller, and Python roles. Controller integration, `control_msgs`, and `joy` are planned dependencies, not claims of installed or implemented features. Declare them in the consuming package when that feature is introduced. The control package builds a C++17 trajectory controller plugin for simulation. It installs the plugin library and its pluginlib registration. Asset directories are installed under `share/<package>`; teleop also registers its ament resource marker and Python module.
 
 The Phase 1A reference model uses `joint_1` through `joint_6` with illustrative Z/Y/Y/X/Y/Z axes. Dimensions, limits, inertias, and frames are not physical hardware specifications; update rates and controller tuning still require review. No physical dimensions or motor capabilities are assumed here.
 
-Future packages to declare include `ign_ros2_control`, `control_msgs`, and later `joy`. The control package already declares the controller manager and both controllers as runtime dependencies. The teleop package already declares `trajectory_msgs`, `sensor_msgs`, and `rclpy` as runtime dependencies, and bringup also declares `sensor_msgs` and `rclpy` for its launch tests. RViz is an optional visualization tool. STM32 device access is not required for simulation development.
+The joystick package `joy` remains a future dependency. The control package already declares the controller manager and both controllers as runtime dependencies. The teleop package already declares `trajectory_msgs`, `sensor_msgs`, and `rclpy` as runtime dependencies, and bringup also declares `sensor_msgs` and `rclpy` for its launch tests. RViz is an optional visualization tool. STM32 device access is not required for simulation development.
 
 The Phase 1B launch in `robot_arm_bringup` expands the Xacro from `robot_arm_description` and passes it to `robot_state_publisher`. By default, `joint_state_publisher` supplies the reference pose on `/joint_states`. External joint states can replace that source for kinematic inspection. RViz is opt-in and uses `base_link` as the fixed frame. See the [reference model guide](reference_robot_model.md).
 
@@ -62,3 +62,13 @@ conversion and spawning, the Gazebo-to-ROS clock bridge, and shutdown/restart.
 Bringup declares the ROS/Gazebo integration as test dependencies for this phase.
 The test uses the existing illustrative arm with a free base and checks its
 spawned joint inventory. See [Phase 2A validation](phase2a_smoke.md).
+
+Phase 2B adds a simulation Xacro that anchors the illustrative arm to the
+world, a controller configuration in control, and a dedicated headless
+launch in bringup. Bringup depends on the Humble `gz_ros2_control` package,
+which ships the Fortress `ign_ros2_control` compatibility plugin, and uses
+`control_msgs` in its standalone trajectory test. The test gates a six-joint
+goal on a successful single-joint goal and fresh measured state. The controller
+guards action and topic waypoints using command bounds derived from the
+expanded URDF, with clearance from the simulated hard stops. See
+[Phase 2B control](phase2b_control.md).
