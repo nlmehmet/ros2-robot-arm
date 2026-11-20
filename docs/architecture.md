@@ -84,3 +84,7 @@ the same interior position limits used by the trajectory guard and the selected
 joint's URDF velocity limit. Teleop uses steady time for the input and feedback
 watchdogs. The launch connects its private output to the simulation controller.
 See the [Phase 4 joystick guide](phase4_sim_joystick.md).
+
+Phase 5 introduces a host-only STM32 communication mock in `robot_arm_control`.
+Its in-memory packet transport and probe state machine build separately from
+the Fortress controller plugin. See the [mock communication design](stm32_mock.md).

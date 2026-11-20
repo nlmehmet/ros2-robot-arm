@@ -18,6 +18,8 @@ See the [Phase 3 motion and fault checks](phase3_motion_tests.md) for test comma
 
 See the [Phase 4 joystick guide](phase4_sim_joystick.md) for the mapping and validation commands.
 
+See the [STM32 mock design](stm32_mock.md) for the host-only Phase 5 checkpoint.
+
 ## Decisions before implementation
 
 - Confirm robot geometry, actuator limits, payload, and joint naming before phase 1.
