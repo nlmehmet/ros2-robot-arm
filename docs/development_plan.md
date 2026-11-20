@@ -5,11 +5,13 @@ Each phase depends on completion of the previous phase unless noted. Run structu
 | Phase | Scope and dependencies | Acceptance criteria |
 | --- | --- | --- |
 | 0 — Scaffold | Five ament packages; Python standard library for offline checks; Humble and colcon for build checks | Structural tests pass; on the target host all five packages build and are discoverable. No robot runtime is claimed. |
-| 1 — Robot description | Reviewed six-joint geometry, axes, limits, inertias; xacro and robot_state_publisher | Xacro expands to a valid URDF; six independently movable joints; connected TF tree; positive inertias; mesh resources resolve after install. Validate in RViz when a display is available. |
+| 1 — Robot description | Phase 1A illustrative six-joint Xacro reference followed by review of actual geometry, limits, inertias, and TF | Phase 1A: static structure test and Xacro expansion on target Ubuntu VM. Full phase 1: validated URDF, six independently movable joints, connected TF tree, hardware-reviewed dimensions/limits/inertias, and RViz inspection. |
 | 2 — Simulation and control | Phase 1; Gazebo Fortress (Gazebo Sim 6), ros_gz_sim, ros_gz_bridge, ign_ros2_control, controller_manager, joint_state_broadcaster, joint_trajectory_controller | Headless world starts; robot spawns once; controllers activate; six joint states publish; FollowJointTrajectory goal reaches tolerance and returns success; out-of-limit commands are rejected. |
 | 3 — Repeatable motion tests | Phase 2; control_msgs action client and launch_testing | Automated startup, nominal motion, invalid goal, timeout, and shutdown tests pass; clean restart works; results include joint errors and controller state. |
 | 4 — Joystick control | Phase 3; joy, sensor_msgs, teleop adapter; choose mapping and command mode | Configurable deadman and scaling; bounded commands; disconnect and stale input stop commands safely; tests use synthetic Joy messages without a device. |
 | 5 — STM32 integration | Reviewed electrical/safety design and protocol; C++17 ros2_control hardware plugin; selected serial or CAN transport | Mock transport passes framing, checksum, timeout, reconnect, and error tests; simulation still passes; supervised bench test verifies limits, watchdog, stop path, and feedback before powered motion. |
+
+Phase 1A's reference model is described in [reference_robot_model.md](reference_robot_model.md). This does **not** close the Phase 1 gate.
 
 ## Decisions before implementation
 
