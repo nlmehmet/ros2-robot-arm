@@ -112,4 +112,56 @@ Status Probe::poll(Clock::time_point now)
   return status_;
 }
 
+Heartbeat::Heartbeat(Transport & transport, Clock::duration period, Clock::duration reply_timeout)
+: transport_(transport), probe_(transport, reply_timeout), period_(period),
+  reply_timeout_(reply_timeout)
+{
+  if (period_ < reply_timeout) {
+    throw std::invalid_argument("Heartbeat period must be at least the reply timeout");
+  }
+}
+
+LinkState Heartbeat::update(Clock::time_point now)
+{
+  if (fault_) {
+    return state_;
+  }
+
+  Status status;
+  if (pending_) {
+    status = probe_.poll(now);
+  } else if (!transport_.connected()) {
+    status = Status::disconnected;
+  } else if (next_due_ && now - *next_due_ >= reply_timeout_) {
+    status = Status::timed_out;
+  } else if (!next_due_ || now >= *next_due_) {
+    status = probe_.start(now);
+    next_due_ = now + period_;
+  } else {
+    return state_;
+  }
+
+  pending_ = status == Status::pending;
+  if (status == Status::acknowledged) {
+    state_ = LinkState::healthy;
+  } else if (!pending_) {
+    fault_ = status;
+    state_ = LinkState::faulted;
+  }
+  return state_;
+}
+
+std::optional<Status> Heartbeat::fault() const {return fault_;}
+
+bool Heartbeat::reset_fault()
+{
+  if (!fault_ || !transport_.connected()) {
+    return false;
+  }
+  fault_.reset();
+  next_due_.reset();
+  state_ = LinkState::awaiting_heartbeat;
+  return true;
+}
+
 }  // namespace robot_arm_control::stm32_mock

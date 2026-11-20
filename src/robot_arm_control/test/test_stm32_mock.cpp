@@ -125,6 +125,68 @@ void check_faults()
   check(checksum_probe.poll(start + 1ms) == mock::Status::invalid_reply, "Bad CRC was accepted");
   std::cout << "PASS disconnect, explicit retry, stale reply, send failure, and corrupt reply\n";
 }
+
+void check_heartbeat()
+{
+  using State = mock::LinkState;
+  ScriptedTransport transport;
+  mock::Heartbeat heartbeat(transport, 20ms, 10ms);
+  check(!heartbeat.reset_fault(), "Reset succeeded before any fault");
+  check(heartbeat.update(start) == State::awaiting_heartbeat && transport.sent == request_one,
+    "First heartbeat did not start in awaiting state");
+  transport.reply = reply_one;
+  check(heartbeat.update(start + 1ms) == State::healthy && !heartbeat.fault(),
+    "First acknowledgement did not establish health");
+  check(heartbeat.update(start + 19ms) == State::healthy && transport.sends == 1,
+    "Heartbeat sent before its period");
+  check(heartbeat.update(start + 20ms) == State::healthy && transport.sends == 2,
+    "Periodic heartbeat did not send precisely when due");
+  check(heartbeat.update(start + 29ms) == State::healthy, "Pending heartbeat faulted early");
+  transport.reply = reply_two;
+  check(heartbeat.update(start + 30ms) == State::faulted &&
+    heartbeat.fault() == mock::Status::timed_out, "Late heartbeat did not latch timeout");
+  check(heartbeat.update(start + 60ms) == State::faulted && transport.sends == 2,
+    "Faulted heartbeat sent another request");
+  check(heartbeat.reset_fault() && !heartbeat.fault(), "Connected reset failed");
+  check(heartbeat.update(start + 61ms) == State::awaiting_heartbeat && transport.sends == 3,
+    "Reset did not schedule a fresh heartbeat");
+  transport.reply = reply_three;
+  check(heartbeat.update(start + 62ms) == State::healthy, "Fresh acknowledgement did not recover");
+  check(heartbeat.update(start + 91ms) == State::faulted && transport.sends == 3 &&
+    heartbeat.fault() == mock::Status::timed_out, "Missed update window did not fault");
+  std::cout << "PASS heartbeat cadence, deadline, missed update window, and explicit recovery\n";
+}
+
+void check_heartbeat_fault_causes()
+{
+  using State = mock::LinkState;
+  ScriptedTransport transport;
+  mock::Heartbeat heartbeat(transport, 20ms, 10ms);
+  heartbeat.update(start);
+  transport.reply = reply_one;
+  heartbeat.update(start + 1ms);
+  transport.online = false;
+  check(heartbeat.update(start + 2ms) == State::faulted &&
+    heartbeat.fault() == mock::Status::disconnected, "Disconnect between probes was missed");
+  check(!heartbeat.reset_fault(), "Offline fault reset succeeded");
+  transport.online = true;
+  check(heartbeat.update(start + 3ms) == State::faulted && transport.sends == 1,
+    "Reconnect cleared the fault or replayed a request");
+  check(heartbeat.reset_fault(), "Reconnect reset failed");
+  heartbeat.update(start + 4ms);
+  transport.reply = reply_one;
+  check(heartbeat.update(start + 5ms) == State::faulted &&
+    heartbeat.fault() == mock::Status::invalid_reply, "Stale heartbeat did not latch invalid reply");
+  transport.online = false;
+  heartbeat.update(start + 6ms);
+  check(heartbeat.fault() == mock::Status::invalid_reply, "Latched cause was overwritten");
+  transport.online = true;
+  transport.writable = false;
+  check(heartbeat.reset_fault(), "Reset before send failure failed");
+  check(heartbeat.update(start + 7ms) == State::faulted &&
+    heartbeat.fault() == mock::Status::send_error, "Failed send did not latch");
+  std::cout << "PASS heartbeat disconnect, invalid reply, send fault, and cause retention\n";
+}
 }  // namespace
 
 int main()
@@ -133,6 +195,8 @@ int main()
     check_framing();
     check_deadline();
     check_faults();
+    check_heartbeat();
+    check_heartbeat_fault_causes();
   } catch (const std::exception & error) {
     std::cerr << error.what() << '\n';
     return 1;

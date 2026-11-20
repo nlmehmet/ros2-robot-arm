@@ -20,6 +20,22 @@ requires a fresh probe, and the sequence persists across reconnects for the
 life of the probe. The in-memory endpoint starts disconnected and clears its
 queued acknowledgement on disconnect.
 
+## Heartbeat supervision
+
+Call `Heartbeat::update(now)` regularly with nondecreasing steady-clock times.
+The first update sends a probe. The link is `awaiting_heartbeat` until a valid
+acknowledgement arrives. It then stays `healthy` while the next probe is within
+its reply window. The heartbeat period is measured from each send and must be
+at least the positive reply timeout. A reply at its deadline, or an update
+that misses a scheduled send by the full timeout, latches a timeout fault.
+
+Disconnect, failed send, and invalid reply also latch `faulted` and retain the
+first cause. A fault stops further probes. Once connected, an explicit
+`reset_fault()` permits a new probe on the next update. A fresh matching
+acknowledgement is required to restore health. The probe sequence persists
+across resets so a stale reply cannot restore health. All supervision runs in
+the caller's update loop.
+
 ```bash
 source /opt/ros/humble/setup.bash
 colcon build --base-paths src --symlink-install
@@ -30,4 +46,6 @@ colcon test-result --verbose
 
 The C++ test uses independent packet fixtures and a scripted transport to check
 corruption, missing and late replies, send failure, disconnect, stale replies,
-and recovery. The existing bringup tests exercise Fortress separately.
+and recovery. Deterministic heartbeat cases cover cadence, watchdog expiry,
+fault latching, reconnect, and explicit reset. The existing bringup tests
+exercise Fortress separately.
