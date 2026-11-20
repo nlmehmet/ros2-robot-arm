@@ -53,6 +53,29 @@ private:
   Status status_{Status::idle};
 };
 
+enum class LinkState {awaiting_heartbeat, healthy, faulted};
+
+class Heartbeat
+{
+public:
+  using Clock = Probe::Clock;
+
+  Heartbeat(Transport & transport, Clock::duration period, Clock::duration reply_timeout);
+  LinkState update(Clock::time_point now);
+  std::optional<Status> fault() const;
+  bool reset_fault();
+
+private:
+  Transport & transport_;
+  Probe probe_;
+  Clock::duration period_;
+  Clock::duration reply_timeout_;
+  std::optional<Clock::time_point> next_due_;
+  std::optional<Status> fault_;
+  LinkState state_{LinkState::awaiting_heartbeat};
+  bool pending_{false};
+};
+
 }  // namespace robot_arm_control::stm32_mock
 
 #endif
