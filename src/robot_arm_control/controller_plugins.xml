@@ -1,0 +1,7 @@
+<library path="guarded_trajectory_controller">
+  <class name="robot_arm_control/GuardedTrajectoryController"
+         type="robot_arm_control::GuardedTrajectoryController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>Position-limit guard for the Fortress reference arm trajectory controller.</description>
+  </class>
+</library>
