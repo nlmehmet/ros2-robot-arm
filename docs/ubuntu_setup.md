@@ -1,6 +1,6 @@
 # Ubuntu 22.04 / ROS 2 Humble setup and validation
 
-This guide targets a native Ubuntu 22.04 LTS (Jammy) machine with system Python 3.10. It prepares the five package skeletons only. No robot model, movement, Gazebo launch, or hardware integration exists yet. Commands below are target-machine instructions, not results from the current Debian review environment.
+This guide targets a native Ubuntu 22.04 LTS (Jammy) machine with system Python 3.10. It prepares the five packages and an illustrative Phase 1A six-joint reference model. No robot movement, Gazebo launch, or hardware integration exists yet. Commands below are target-machine instructions, not results from the current Debian review environment.
 
 ## 1. Install the supported toolchain
 
