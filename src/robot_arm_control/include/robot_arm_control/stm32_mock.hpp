@@ -3,6 +3,7 @@
 
 #include <array>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 
@@ -32,6 +33,25 @@ public:
 private:
   bool connected_{false};
   std::optional<Frame> reply_;
+};
+
+// Host-only byte boundary with one frame of buffering in each direction.
+class BufferedTransport final : public Transport
+{
+public:
+  void set_connected(bool connected);
+  bool connected() const override;
+  bool send(const Frame & frame) override;
+  std::optional<Frame> receive() override;
+  bool accept_byte(std::uint8_t byte);
+  std::optional<std::uint8_t> take_byte();
+
+private:
+  bool connected_{false};
+  Frame rx_{};
+  Frame tx_{};
+  std::size_t rx_size_{0};
+  std::size_t tx_offset_{tx_.size()};
 };
 
 enum class Status {idle, pending, acknowledged, disconnected, send_error, timed_out, invalid_reply};

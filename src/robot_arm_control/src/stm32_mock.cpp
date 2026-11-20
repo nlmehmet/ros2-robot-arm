@@ -70,6 +70,53 @@ std::optional<Frame> Loopback::receive()
   return std::exchange(reply_, std::nullopt);
 }
 
+void BufferedTransport::set_connected(bool connected)
+{
+  connected_ = connected;
+  if (!connected_) {
+    rx_size_ = 0;
+    tx_offset_ = tx_.size();
+  }
+}
+
+bool BufferedTransport::connected() const {return connected_;}
+
+bool BufferedTransport::send(const Frame & frame)
+{
+  if (!connected_ || tx_offset_ < tx_.size()) {
+    return false;
+  }
+  tx_ = frame;
+  tx_offset_ = 0;
+  return true;
+}
+
+std::optional<Frame> BufferedTransport::receive()
+{
+  if (rx_size_ != rx_.size()) {
+    return std::nullopt;
+  }
+  rx_size_ = 0;
+  return rx_;
+}
+
+bool BufferedTransport::accept_byte(std::uint8_t byte)
+{
+  if (!connected_ || rx_size_ == rx_.size()) {
+    return false;
+  }
+  rx_[rx_size_++] = byte;
+  return true;
+}
+
+std::optional<std::uint8_t> BufferedTransport::take_byte()
+{
+  if (tx_offset_ == tx_.size()) {
+    return std::nullopt;
+  }
+  return tx_[tx_offset_++];
+}
+
 Probe::Probe(Transport & transport, Clock::duration timeout)
 : transport_(transport), timeout_(timeout)
 {
