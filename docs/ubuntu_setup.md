@@ -104,7 +104,7 @@ import robot_arm_teleop
 root = Path.cwd().resolve()
 assets = {
     'robot_arm_description': ('urdf', 'meshes', 'rviz'),
-    'robot_arm_bringup': ('launch', 'config'),
+    'robot_arm_bringup': ('launch', 'config', 'worlds'),
     'robot_arm_control': ('config',),
     'robot_arm_teleop': ('launch', 'config'),
     'robot_arm_interfaces': ('msg', 'srv', 'action'),
