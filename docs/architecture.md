@@ -72,3 +72,9 @@ goal on a successful single-joint goal and fresh measured state. The controller
 guards action and topic waypoints using command bounds derived from the
 expanded URDF, with clearance from the simulated hard stops. See
 [Phase 2B control](phase2b_control.md).
+
+Phase 3 registers a simulation integration test in bringup. It reuses the
+Phase 2B launch, controller readiness checks, and scoped process cleanup.
+The verifier sends standard trajectory actions and checks measured joint state
+after success, rejection, timeout, and cancellation. See the
+[Phase 3 test guide](phase3_motion_tests.md).

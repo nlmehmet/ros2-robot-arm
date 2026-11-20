@@ -10,6 +10,7 @@ install(DIRECTORY launch config worlds
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(reference_arm_launch test/test_reference_arm_launch.py TIMEOUT 60)
+  ament_add_pytest_test(phase3_motion test/test_phase3_motion.py TIMEOUT 180)
 endif()
 
 ament_package()
