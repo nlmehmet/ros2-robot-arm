@@ -1,6 +1,6 @@
 # Architecture
 
-Target: Ubuntu 22.04 LTS / ROS 2 Humble / Gazebo Fortress (Gazebo Sim 6). This commit is a package scaffold; the runtime elements below are planned, not implemented. ROS 2 remains Humble. Use its Fortress-compatible integration, including the Ignition names retained in Humble-era APIs.
+Target: Ubuntu 22.04 LTS / ROS 2 Humble / Gazebo Fortress (Gazebo Sim 6). Phase 1B provides a headless launch for the illustrative six-joint reference model. The diagram shows the planned simulation and hardware architecture. ROS 2 remains Humble. Use its Fortress-compatible integration, including the Ignition names retained in Humble-era APIs.
 
 ```mermaid
 flowchart TB
@@ -51,8 +51,8 @@ Fortress is Gazebo Sim major version 6. Use `ros_gz_sim` for spawning and simula
 
 Current package dependencies cover the scaffold's intended description, launch, controller, and Python roles. Gazebo integration, `control_msgs`, and `joy` are planned dependencies, not claims of installed or implemented features. Declare them in the consuming package when that feature is introduced. The reserved C++ include/source directories contain no library and are deliberately not installed. Asset directories are installed under `share/<package>`; teleop also registers its ament resource marker and Python module.
 
-Use `joint_1` through `joint_6` consistently once the model is introduced. Frame names, joint axes, limits, inertias, update rates, and controller tuning require review in phase 1. No physical dimensions or motor capabilities are assumed here.
+The Phase 1A reference model uses `joint_1` through `joint_6` with illustrative Z/Y/Y/X/Y/Z axes. Dimensions, limits, inertias, and frames are not physical hardware specifications; update rates and controller tuning still require review. No physical dimensions or motor capabilities are assumed here.
 
-Planned dependencies: xacro, robot_state_publisher, ros_gz_sim, ros_gz_bridge, ign_ros2_control, controller_manager, joint_state_broadcaster, joint_trajectory_controller, control_msgs, trajectory_msgs, sensor_msgs, rclpy, and later joy. RViz is an optional visualization tool. STM32 device access is not required for simulation development.
+Future packages to declare include `ros_gz_sim`, `ros_gz_bridge`, `ign_ros2_control`, `control_msgs`, and later `joy`. The control package already declares the controller manager and both controllers as runtime dependencies. The teleop package already declares `trajectory_msgs`, `sensor_msgs`, and `rclpy` as runtime dependencies, and bringup also declares `sensor_msgs` and `rclpy` for its launch tests. RViz is an optional visualization tool. STM32 device access is not required for simulation development.
 
-The repository currently has no executable nodes, launch files, robot model, controller YAML, or hardware driver. Directory README files mark ownership without suggesting these features work.
+The Phase 1B launch in `robot_arm_bringup` expands the Xacro from `robot_arm_description` and passes it to `robot_state_publisher`. By default, `joint_state_publisher` supplies the reference pose on `/joint_states`. External joint states can replace that source for kinematic inspection. RViz is opt-in and uses `base_link` as the fixed frame. See the [reference model guide](reference_robot_model.md).
