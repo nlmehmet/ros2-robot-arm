@@ -108,7 +108,7 @@ class WorkspaceContracts(unittest.TestCase):
                     self.assertTrue((base / directory).is_dir(), directory)
                 expected_assets = {
                     'robot_arm_description': {'urdf', 'meshes', 'rviz'},
-                    'robot_arm_bringup': {'launch', 'config'},
+                    'robot_arm_bringup': {'launch', 'config', 'worlds'},
                     'robot_arm_control': {'config'},
                     'robot_arm_interfaces': {'msg', 'srv', 'action'},
                 }
