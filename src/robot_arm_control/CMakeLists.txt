@@ -25,4 +25,14 @@ install(DIRECTORY config
   DESTINATION share/${PROJECT_NAME}
 )
 
+add_library(stm32_mock STATIC src/stm32_mock.cpp)
+target_include_directories(stm32_mock PUBLIC include)
+
+if(BUILD_TESTING)
+  enable_testing()
+  add_executable(test_stm32_mock test/test_stm32_mock.cpp)
+  target_link_libraries(test_stm32_mock PRIVATE stm32_mock)
+  add_test(NAME stm32_mock COMMAND test_stm32_mock)
+endif()
+
 ament_package()
