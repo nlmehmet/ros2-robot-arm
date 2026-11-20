@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<!-- Illustrative six-joint learning model only: NOT validated for physical hardware.
+     All lengths, masses, joint limits, and efforts are example values. -->
+<robot name="reference_arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="length_0" value="0.10"/>
+  <xacro:property name="length_1" value="0.15"/>
+  <xacro:property name="length_2" value="0.30"/>
+  <xacro:property name="length_3" value="0.25"/>
+  <xacro:property name="length_4" value="0.15"/>
+  <xacro:property name="length_5" value="0.12"/>
+  <xacro:property name="length_6" value="0.10"/>
+  <!-- Cylinder extends along local +Z; centre of mass lies halfway along it.
+       Inertias below are those of a uniform solid cylinder around its centre. -->
+  <xacro:macro name="cyl_link" params="name length radius mass rgba">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 ${length / 2.0}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${radius}" length="${length}"/></geometry>
+        <material name="${name}_mat"><color rgba="${rgba}"/></material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${length / 2.0}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${radius}" length="${length}"/></geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 ${length / 2.0}" rpy="0 0 0"/>
+        <mass value="${mass}"/>
+        <inertia ixx="${mass * (3.0 * radius * radius + length * length) / 12.0}"
+                 ixy="0" ixz="0"
+                 iyy="${mass * (3.0 * radius * radius + length * length) / 12.0}"
+                 iyz="0" izz="${mass * radius * radius / 2.0}"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+  <xacro:cyl_link name="base_link" length="${length_0}" radius="0.090" mass="2.0" rgba="0.2 0.3 0.4 1"/>
+  <xacro:cyl_link name="link_1" length="${length_1}" radius="0.060" mass="1.4" rgba="0.2 0.4 0.7 1"/>
+  <xacro:cyl_link name="link_2" length="${length_2}" radius="0.050" mass="1.2" rgba="0.3 0.6 0.7 1"/>
+  <xacro:cyl_link name="link_3" length="${length_3}" radius="0.045" mass="0.9" rgba="0.2 0.4 0.7 1"/>
+  <xacro:cyl_link name="link_4" length="${length_4}" radius="0.040" mass="0.6" rgba="0.3 0.6 0.7 1"/>
+  <xacro:cyl_link name="link_5" length="${length_5}" radius="0.035" mass="0.4" rgba="0.2 0.4 0.7 1"/>
+  <xacro:cyl_link name="link_6" length="${length_6}" radius="0.030" mass="0.3" rgba="0.8 0.5 0.2 1"/>
+  <!-- Axis pattern Z/Y/Y/X/Y/Z; model is not actuated at this milestone. -->
+  <joint name="joint_1" type="revolute">
+    <parent link="base_link"/><child link="link_1"/>
+    <origin xyz="0 0 ${length_0}" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159" upper="3.14159" effort="5" velocity="1"/>
+  </joint>
+  <joint name="joint_2" type="revolute">
+    <parent link="link_1"/><child link="link_2"/>
+    <origin xyz="0 0 ${length_1}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="5" velocity="1"/>
+  </joint>
+  <joint name="joint_3" type="revolute">
+    <parent link="link_2"/><child link="link_3"/>
+    <origin xyz="0 0 ${length_2}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2" upper="2" effort="4" velocity="1"/>
+  </joint>
+  <joint name="joint_4" type="revolute">
+    <parent link="link_3"/><child link="link_4"/>
+    <origin xyz="0 0 ${length_3}" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-3.14" upper="3.14" effort="3" velocity="1"/>
+  </joint>
+  <joint name="joint_5" type="revolute">
+    <parent link="link_4"/><child link="link_5"/>
+    <origin xyz="0 0 ${length_4}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2" upper="2" effort="2" velocity="1"/>
+  </joint>
+  <joint name="joint_6" type="revolute">
+    <parent link="link_5"/><child link="link_6"/>
+    <origin xyz="0 0 ${length_5}" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14" upper="3.14" effort="1" velocity="1"/>
+  </joint>
+</robot>
